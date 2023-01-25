@@ -1,21 +1,23 @@
 package banking.controller;
 
+import banking.model.Card;
 import banking.view.TextUserInterface;
+import banking.model.Database;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
 public class AppLogic {
-    private final Map<String, String> cardData;
+    // private final Map<String, String> cardData;
     private final TextUserInterface ui = new TextUserInterface();
     private boolean loggedIn;
     private final Random rng;
+    private final Database db;
 
-    public AppLogic() {
-        cardData = new HashMap<>();
+    public AppLogic(String databaseFileName) {
+        // cardData = new HashMap<>();
         loggedIn = false;
         rng = new Random();
+        db = new Database(databaseFileName);
     }
 
     public void start() {
@@ -27,7 +29,7 @@ public class AppLogic {
                 switch (menuChoice) {
                     case 1 -> createAccount();
                     case 2 -> login();
-                    case 0 -> { return; }
+                    case 0 -> { db.releaseResources(); return; }
                 }
             } else {
                 ui.printLoggedInUserMenu();
@@ -44,7 +46,9 @@ public class AppLogic {
     private void login() {
         String cardNumber = ui.getCardNumberFromUser();
         String pin = ui.getPinFromUser();
-        if (cardData.containsKey(cardNumber) && cardData.get(cardNumber).equals(pin)) {
+        Card card = db.getCardDetails(cardNumber, pin);
+
+        if (card.isValid() && card.getCardNumber().equals(cardNumber) && card.getPin().equals(pin)) {
             loggedIn = true;
             ui.printLoginSuccess();
         } else {
@@ -55,7 +59,7 @@ public class AppLogic {
     void createAccount() {
         String cardNumber = createCardNumber();
         String pin = createPin();
-        cardData.put(cardNumber, pin);
+        db.persistCardData(cardNumber, pin);
         ui.printCreatedCardDetails(cardNumber, pin);
     }
 
@@ -85,17 +89,12 @@ public class AppLogic {
         return newAccountNumber;
     }
 
-    static String extractAcctNoFromCardNo(String cardNumber) {
+    public static String extractAcctNoFromCardNo(String cardNumber) {
         return cardNumber.substring(6, 15);
     }
 
     boolean isAcctNoUnique(String accountNumber) {
-        for (String cardNumber : cardData.keySet()) {
-            if (accountNumber.equals(extractAcctNoFromCardNo(cardNumber))) {
-                return false;
-            }
-        }
-        return true;
+        return db.isAccountNumberUnique(accountNumber);
     }
 
     static String calculateChecksum(String cardNoWithoutChecksum) {

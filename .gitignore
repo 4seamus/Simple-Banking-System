@@ -46,6 +46,10 @@ htmlReport/
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
+# Database Files #
+*.db
+*.s3db
+
 # Package Files #
 *.jar
 *.war
