@@ -24,22 +24,20 @@ public class TextUserInterface {
                 0. Exit""");
     }
 
-    public int getMenuChoice() {
-        return scan.nextInt();
-    }
+    public int getMenuChoice() { return Integer.parseInt(scan.nextLine()); }
 
     public void printBalance() {
         System.out.println("Balance: 0");
         System.out.println();
     }
 
-    public void printCreatedCardDetails(long cardNumber, int pin) {
+    public void printCreatedCardDetails(String cardNumber, String pin) {
         System.out.printf("""
                 Your card has been created
                 Your card number:
-                %d
+                %s
                 Your card PIN:
-                %d
+                %s
                 """, cardNumber, pin);
         System.out.println();
     }
@@ -52,13 +50,15 @@ public class TextUserInterface {
         System.out.println("\nWrong card number or PIN!\n");
     }
 
-    public long getCardNumberFromUser() {
+    public String getCardNumberFromUser() {
         System.out.println("Enter your card number:");
-        return scan.nextLong();
+        //return scan.nextLong();
+        return scan.nextLine();
     }
 
-    public int getPinFromUser() {
+    public String getPinFromUser() {
         System.out.println("Enter your PIN:");
-        return scan.nextInt();
+        //return scan.nextInt();
+        return scan.nextLine();
     }
 }

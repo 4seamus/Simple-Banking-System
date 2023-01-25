@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class AppLogic {
-    private final Map<Long, Integer> cardData;
+    private final Map<String, String> cardData;
     private final TextUserInterface ui = new TextUserInterface();
     private boolean loggedIn;
     private final Random rng;
@@ -42,9 +42,9 @@ public class AppLogic {
     }
 
     private void login() {
-        long cardNumber = ui.getCardNumberFromUser();
-        int pin = ui.getPinFromUser();
-        if (cardData.containsKey(cardNumber) && cardData.get(cardNumber) == pin) {
+        String cardNumber = ui.getCardNumberFromUser();
+        String pin = ui.getPinFromUser();
+        if (cardData.containsKey(cardNumber) && cardData.get(cardNumber).equals(pin)) {
             loggedIn = true;
             ui.printLoginSuccess();
         } else {
@@ -52,31 +52,65 @@ public class AppLogic {
         }
     }
 
-    private void createAccount() {
-        long cardNumber = createCardNumber();
-        int pin = createPin();
+    void createAccount() {
+        String cardNumber = createCardNumber();
+        String pin = createPin();
         cardData.put(cardNumber, pin);
         ui.printCreatedCardDetails(cardNumber, pin);
     }
 
-    private long createCardNumber() {
+    String createCardNumber() {
         final String BIN = "400000";
         String accountNumber = generateRandomDigits(9);
-        String checksum = generateRandomDigits(1);
-        return Long.parseLong(BIN + accountNumber + checksum);
+        String checksum = calculateChecksum(BIN + accountNumber);
+        return BIN + accountNumber + checksum;
     }
 
-    private int createPin() {
-        return rng.nextInt(10000);
+    String createPin() {
+        String pinBase = String.valueOf(rng.nextInt(10000));
+        return String.format("%04d", Integer.parseInt(pinBase)); // pad with zeroes to make 4 chars/
     }
 
-    private String generateRandomDigits(int length) {
-        StringBuilder sb = new StringBuilder();
+    String generateRandomDigits(int length) {
+        String newAccountNumber;
+        do {
+            StringBuilder sb = new StringBuilder();
 
-        for (int i = 0; i < length; i++) {
-            int digit = rng.nextInt(10);
-            sb.append(digit);
+            for (int i = 0; i < length; i++) {
+                int digit = rng.nextInt(10);
+                sb.append(digit);
+            }
+            newAccountNumber = sb.toString();
+        } while (!isAcctNoUnique(newAccountNumber));
+        return newAccountNumber;
+    }
+
+    static String extractAcctNoFromCardNo(String cardNumber) {
+        return cardNumber.substring(6, 15);
+    }
+
+    boolean isAcctNoUnique(String accountNumber) {
+        for (String cardNumber : cardData.keySet()) {
+            if (accountNumber.equals(extractAcctNoFromCardNo(cardNumber))) {
+                return false;
+            }
         }
-        return sb.toString();
+        return true;
+    }
+
+    static String calculateChecksum(String cardNoWithoutChecksum) {
+        int[] accountNumberDigits = new int[cardNoWithoutChecksum.length()];
+        int sumOfLuhnAccountNumberDigits = 0;
+        for (int i = 0; i < cardNoWithoutChecksum.length(); i++) {
+            accountNumberDigits[i] = Character.getNumericValue(cardNoWithoutChecksum.charAt(i));
+            if (i % 2 == 0) {
+                accountNumberDigits[i] *= 2;
+                if (accountNumberDigits[i] > 9) {
+                    accountNumberDigits[i] -= 9;
+                }
+            }
+            sumOfLuhnAccountNumberDigits += accountNumberDigits[i];
+        }
+        return String.valueOf(10 - (sumOfLuhnAccountNumberDigits % 10));
     }
 }
