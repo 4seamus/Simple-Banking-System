@@ -7,14 +7,12 @@ import banking.model.Database;
 import java.util.Random;
 
 public class AppLogic {
-    // private final Map<String, String> cardData;
     private final TextUserInterface ui = new TextUserInterface();
     private boolean loggedIn;
     private final Random rng;
     private final Database db;
 
     public AppLogic(String databaseFileName) {
-        // cardData = new HashMap<>();
         loggedIn = false;
         rng = new Random();
         db = new Database(databaseFileName);
@@ -22,28 +20,32 @@ public class AppLogic {
 
     public void start() {
         int menuChoice;
+        Card card = Card.createInvalidCard(); // just a placeholder card that will be replaced, but satisfies the compiler initialization checks
         while (true) {
             if (!loggedIn) {
                 ui.printMainMenu();
                 menuChoice = ui.getMenuChoice();
                 switch (menuChoice) {
                     case 1 -> createAccount();
-                    case 2 -> login();
+                    case 2 -> card = login();
                     case 0 -> { db.releaseResources(); return; }
                 }
             } else {
                 ui.printLoggedInUserMenu();
                 menuChoice = ui.getMenuChoice();
                 switch (menuChoice) {
-                    case 1 -> ui.printBalance();
-                    case 2 -> loggedIn = false;
+                    case 1 -> ui.printBalance(db.getCardDetails(card.getCardNumber(), card.getPin()).getBalance());
+                    case 2 -> ui.addIncomeWorkflow(db, card);
+                    case 3 -> ui.transferWorkflow(db, card);
+                    case 4 -> { db.deleteCardData(card.getCardNumber()); ui.printAccountCloseSuccess();}
+                    case 5 -> loggedIn = false;
                     case 0 -> { return; }
                 }
             }
         }
     }
 
-    private void login() {
+    private Card login() {
         String cardNumber = ui.getCardNumberFromUser();
         String pin = ui.getPinFromUser();
         Card card = db.getCardDetails(cardNumber, pin);
@@ -54,19 +56,21 @@ public class AppLogic {
         } else {
             ui.printLoginError();
         }
+
+        return card;
     }
 
     void createAccount() {
         String cardNumber = createCardNumber();
         String pin = createPin();
-        db.persistCardData(cardNumber, pin);
+        db.saveNewCardData(cardNumber, pin);
         ui.printCreatedCardDetails(cardNumber, pin);
     }
 
     String createCardNumber() {
         final String BIN = "400000";
         String accountNumber = generateRandomDigits(9);
-        String checksum = calculateChecksum(BIN + accountNumber);
+        String checksum = Card.calculateChecksum(BIN + accountNumber);
         return BIN + accountNumber + checksum;
     }
 
@@ -89,27 +93,7 @@ public class AppLogic {
         return newAccountNumber;
     }
 
-    public static String extractAcctNoFromCardNo(String cardNumber) {
-        return cardNumber.substring(6, 15);
-    }
-
     boolean isAcctNoUnique(String accountNumber) {
         return db.isAccountNumberUnique(accountNumber);
-    }
-
-    static String calculateChecksum(String cardNoWithoutChecksum) {
-        int[] accountNumberDigits = new int[cardNoWithoutChecksum.length()];
-        int sumOfLuhnAccountNumberDigits = 0;
-        for (int i = 0; i < cardNoWithoutChecksum.length(); i++) {
-            accountNumberDigits[i] = Character.getNumericValue(cardNoWithoutChecksum.charAt(i));
-            if (i % 2 == 0) {
-                accountNumberDigits[i] *= 2;
-                if (accountNumberDigits[i] > 9) {
-                    accountNumberDigits[i] -= 9;
-                }
-            }
-            sumOfLuhnAccountNumberDigits += accountNumberDigits[i];
-        }
-        return String.valueOf(10 - (sumOfLuhnAccountNumberDigits % 10));
     }
 }

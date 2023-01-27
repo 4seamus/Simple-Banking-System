@@ -2,7 +2,7 @@ package banking.model;
 
 import org.junit.jupiter.api.Test;
 
-import static banking.controller.AppLogic.extractAcctNoFromCardNo;
+import static banking.model.Card.extractAcctNoFromCardNo;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DatabaseTest {
@@ -13,8 +13,8 @@ class DatabaseTest {
         db.createTables();
         String cardNumber = "4000009901741192";
         String pin = "6752";
-        db.persistCardData(cardNumber, pin);
-        db.persistCardData(cardNumber, pin);
+        db.saveNewCardData(cardNumber, pin);
+        db.saveNewCardData(cardNumber, pin);
         assertEquals(false, db.isAccountNumberUnique(extractAcctNoFromCardNo(cardNumber)));
     }
 }

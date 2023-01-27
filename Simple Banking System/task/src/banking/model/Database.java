@@ -54,7 +54,8 @@ public class Database {
         }
     }
 
-    public void persistCardData(String cardNumber, String pin) {
+    // used for card create code path
+    public void saveNewCardData(String cardNumber, String pin) {
         String sql = "INSERT INTO card(number, pin) VALUES(?,?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, cardNumber);
@@ -65,10 +66,32 @@ public class Database {
         }
     }
 
+    // used for balance update code path (add income, do transfer)
+    public void updateCardData(String cardNumber, int balance) {
+        String sql = "UPDATE card SET balance = ? WHERE number = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setInt(1, balance);
+            preparedStatement.setString(2, cardNumber);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void deleteCardData(String cardNumber) {
+        String sql = "DELETE FROM card WHERE number = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, cardNumber);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     // expects that the DB doesn't have duplicate card numbers
     // returns the 1st card that matches, otherwise it returns an invalid card
     public Card getCardDetails(String cardNumber, String pin) {
-        String sql = "SELECT number, pin FROM card WHERE number = ? AND pin = ?";
+        String sql = "SELECT number, pin, balance FROM card WHERE number = ? AND pin = ?";
 
         try (PreparedStatement preparedStatement  = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, cardNumber);
@@ -76,7 +99,7 @@ public class Database {
 
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
-                    return new Card(rs.getString("number"), rs.getString("pin"));
+                    return new Card(rs.getString("number"), rs.getString("pin"), rs.getInt("balance"));
                 }
             }
         } catch (SQLException e) {
@@ -84,6 +107,23 @@ public class Database {
         }
 
         return Card.createInvalidCard();
+    }
+
+    public boolean doesCardExist(String cardNumber) {
+        String sql = "SELECT number FROM card WHERE number = ?";
+
+        try (PreparedStatement preparedStatement  = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, cardNumber);
+
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next())
+                    return true;
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return false;
     }
 
     public boolean isAccountNumberUnique(String accountNumber) {
@@ -100,5 +140,21 @@ public class Database {
             System.out.println(e.getMessage());
         }
         return true;
+    }
+
+    public void transact(String fromCardNumber, String toCardNumber, int transferAmount) {
+        String sql = "UPDATE card SET balance = balance + ? WHERE number = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            connection.setAutoCommit(false);
+            preparedStatement.setInt(1, -transferAmount);
+            preparedStatement.setString(2, fromCardNumber);
+            preparedStatement.executeUpdate();
+            preparedStatement.setInt(1, transferAmount);
+            preparedStatement.setString(2, toCardNumber);
+            preparedStatement.executeUpdate();
+            connection.setAutoCommit(true);
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }

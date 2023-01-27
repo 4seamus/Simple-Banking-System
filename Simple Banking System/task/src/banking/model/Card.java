@@ -6,10 +6,10 @@ public class Card {
     private int balance;
     private boolean valid;
 
-    public Card(String cardNumber, String pin) {
+    public Card(String cardNumber, String pin, int balance) {
         this.cardNumber = cardNumber;
         this.pin = pin;
-        balance = 0;
+        this.balance = balance;
         valid = true;
     }
 
@@ -22,20 +22,38 @@ public class Card {
         return new Card();
     }
 
+    public static String extractAcctNoFromCardNo(String cardNumber) {
+        return cardNumber.substring(6, 15);
+    }
+
+    public static String calculateChecksum(String cardNoWithoutChecksum) {
+        int[] cardNoDigitsWithoutChecksum = new int[cardNoWithoutChecksum.length()];
+        int sumOfLuhnAccountNumberDigits = 0;
+        for (int i = 0; i < cardNoWithoutChecksum.length(); i++) {
+            cardNoDigitsWithoutChecksum[i] = Character.getNumericValue(cardNoWithoutChecksum.charAt(i));
+            if (i % 2 == 0) {
+                cardNoDigitsWithoutChecksum[i] *= 2;
+                if (cardNoDigitsWithoutChecksum[i] > 9) {
+                    cardNoDigitsWithoutChecksum[i] -= 9;
+                }
+            }
+            sumOfLuhnAccountNumberDigits += cardNoDigitsWithoutChecksum[i];
+        }
+        return String.valueOf(10 - (sumOfLuhnAccountNumberDigits % 10));
+    }
+
+    public static boolean isLuhnValid(String cardNumber) {
+        String checksum = String.valueOf(Character.getNumericValue(cardNumber.charAt(cardNumber.length() - 1)));
+        String cardNoWithoutChecksum = cardNumber.substring(0, cardNumber.length() - 1);
+        return checksum.equals(calculateChecksum(cardNoWithoutChecksum));
+    }
+
     public String getCardNumber() {
         return cardNumber;
     }
 
-    public void setCardNumber(String cardNumber) {
-        this.cardNumber = cardNumber;
-    }
-
     public String getPin() {
         return pin;
-    }
-
-    public void setPin(String pin) {
-        this.pin = pin;
     }
 
     public int getBalance() {
@@ -48,9 +66,5 @@ public class Card {
 
     public boolean isValid() {
         return valid;
-    }
-
-    public void setValid(boolean valid) {
-        this.valid = valid;
     }
 }
